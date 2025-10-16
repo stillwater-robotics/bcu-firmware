@@ -6,29 +6,32 @@
 
 int button_data = LOW;
 byte message_count = 1;
-#define MESSAGE_DATA_LEN 9
-byte message_data[] = {0xFF, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0};
+byte message_data[BICA_BUFFER_LEN];
+
 void setup() {
   Serial.begin(9600);
   while(!Serial);
+
+  bica_func func = bica_get_function(BICAM_TEST_DUMMY, BICAT_CREATE);
+  func(message_data, BICA_BUFFER_LEN, nullptr);
     
-  pinMode(LED_DEBUG, OUTPUT);
-  pinMode(LED_SEND, OUTPUT);
-  pinMode(BUTTON, INPUT);
+  pinMode(PIN_LED_DEBUG, OUTPUT);
+  pinMode(PIN_LED_SEND, OUTPUT);
+  pinMode(PIN_BUTTON, INPUT);
 }
 
 void loop() {
-  digitalWrite(LED_DEBUG, LOW);
-  digitalWrite(LED_SEND, LOW);
+  digitalWrite(PIN_LED_DEBUG, LOW);
+  digitalWrite(PIN_LED_SEND, LOW);
   delay(900);
-  button_data = digitalRead(BUTTON);
-  digitalWrite(LED_DEBUG, HIGH);
+  button_data = digitalRead(PIN_BUTTON);
+  digitalWrite(PIN_LED_DEBUG, HIGH);
   
   if(button_data == HIGH){
-    while(Serial.availableForWrite() <= MESSAGE_DATA_LEN) delay(10);
-    message_data[MESSAGE_DATA_LEN-1] = message_count++;
-    digitalWrite(LED_SEND, button_data);
-    Serial.write(message_data, MESSAGE_DATA_LEN);
+    while(Serial.availableForWrite() <= BICA_BUFFER_LEN) delay(10);
+    message_data[BICA_BUFFER_LEN-1] = message_count++;
+    digitalWrite(PIN_LED_SEND, button_data);
+    Serial.write(message_data, BICA_BUFFER_LEN);
   }
   delay(100);
 }

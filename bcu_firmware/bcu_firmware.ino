@@ -205,7 +205,7 @@ void setup(){
   setup_display();
   setup_pins();
   setup_serial();
-  eflag_setup = (eflag_bica || eflag_disp || eflag_serial);
+  eflag_setup = have_errors();
   update_error_display();
   // Halt on setup error
   while(eflag_setup) delay(1000);
