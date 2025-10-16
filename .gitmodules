@@ -1,0 +1,6 @@
+[submodule "bcu_firmware/base-internal-com-api"]
+	path = bcu_firmware/base-internal-com-api
+	url = https://github.com/stillwater-robotics/base-internal-com-api
+[submodule "test_messager/base-internal-com-api"]
+	path = test_messager/base-internal-com-api
+	url = https://github.com/stillwater-robotics/base-internal-com-api
