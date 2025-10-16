@@ -39,8 +39,6 @@ char disp_line3_buffer[BCU_DISP_LINE_BUFFER_MAX];
 int disp_line2_current = 2;
 int disp_line2_count = 0;
 
-
-
 /*##### Serial #####*/
 #define BCU_MSG_BAUD_RATE 9600
 byte msg_in_buffer[BICA_BUFFER_LEN];
@@ -149,7 +147,10 @@ void loop_process_messages(){
       for(int i = 1; i < BICA_BUFFER_LEN; i++)
         snprintf(disp_line3_buffer, BCU_DISP_LINE_BUFFER_MAX, "%s%02x", disp_line3_buffer, msg_in_buffer[i]);
       
-      //processing here!
+      _bica_m_function_ptr func;
+      func = bica_get_function(msg_in_buffer[0], BICAT_PROCESS);
+      if(func != nullptr && func)
+        func(msg_in_buffer, BICA_BUFFER_LEN, nullptr);
     }
   }
 }
