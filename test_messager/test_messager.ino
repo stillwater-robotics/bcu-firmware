@@ -1,11 +1,13 @@
-#define LED_DEBUG 13
-#define LED_SEND 12
-#define BUTTON 11
+#include "base-internal-com-api/bica.h"
+
+#define PIN_LED_DEBUG 13
+#define PIN_LED_SEND 12
+#define PIN_BUTTON 11
 
 int button_data = LOW;
 byte message_count = 1;
 #define MESSAGE_DATA_LEN 9
-byte message_data[] = {0x42, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0};
+byte message_data[] = {0xFF, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0};
 void setup() {
   Serial.begin(9600);
   while(!Serial);
