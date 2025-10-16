@@ -110,7 +110,7 @@ void setup_serial(){
 
 /*##### Update and Loop Functions #####*/
 void update_error_display(){
-  if(eflag_bica || eflag_disp || eflag_serial)
+  if(have_errors())
     digitalWrite(BCU_PIN_ERROR_LED, HIGH);
   
   if(eflag_setup)
