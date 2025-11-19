@@ -11,9 +11,11 @@
  * This file represents all firmware used on the agent's BCU.
  */
 
+#ifdef ARDUINO
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#endif
 #include "base-internal-com-api/bica.h"
 
 /*##### Display #####*/
@@ -47,6 +49,15 @@ byte msg_out_buffer[BICA_BUFFER_LEN];
 /*##### Pins #####*/
 #define BCU_PIN_DEBUG_BUTTON 2
 #define BCU_PIN_ERROR_LED 13
+
+#define BCU_PIN_CA_FORWARD A0
+#define BCU_PIN_CA_DOWN A1
+
+#define BCU_PIN_SAFETY_HUMIDITY_READ
+#define BCU_PIN_SAFETY_HUMIDITY_DRIVE
+#define BCU_PIN_SAFETY_LIGHT_SENSOR
+#define BCU_PIN_SAFETY_LIGHT_DRIVE
+#define BCU_PIN_SAFETY_TEMPERATURE
 
 /*##### Error Flags #####*/
 int eflag_bica = 0;
