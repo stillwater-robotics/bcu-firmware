@@ -7,8 +7,11 @@ This repository contains the firmware for the BCU inside each agent. The BCU is 
 
 ## Included Software
 - bcu_firmware/bcu_firmware.ino is the actual firmware for the BCU
+  - Must be compiled with Arduino IDE
 - test_messager/test_messager.ino is companion firmware used in the bench test setup
+  - Must be compiled with Arduino IDE
 - bcu_simulation.c runs the firmware controlling a simulated robot setup.
+  - Requires SDL2
 - unittest.c runs unit tests on the firmware.
 
 ## Download & Compilation
