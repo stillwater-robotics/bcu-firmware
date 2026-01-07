@@ -46,24 +46,37 @@ int disp_line2_count = 0;
 byte msg_in_buffer[BICA_BUFFER_LEN];
 byte msg_out_buffer[BICA_BUFFER_LEN];
 
-/*##### Pins #####*/
+/*##### Misc Pins #####*/
 #define BCU_PIN_DEBUG_BUTTON 2
 #define BCU_PIN_ERROR_LED 13
 
+/*##### Collision Avoidance #####*/
 #define BCU_PIN_CA_FORWARD A0
 #define BCU_PIN_CA_DOWN A1
 
+#define CA_THRESHOLD 2100 //TODO: Set correct value later
+#define CA_MASK_FORWARD 0b1
+#define CA_MASK_DOWN 0b10
+int ca_override_flag = 0;
+
+/*##### Safety #####*/
 #define BCU_PIN_SAFETY_HUMIDITY_READ
 #define BCU_PIN_SAFETY_HUMIDITY_DRIVE
 #define BCU_PIN_SAFETY_LIGHT_SENSOR
 #define BCU_PIN_SAFETY_LIGHT_DRIVE
 #define BCU_PIN_SAFETY_TEMPERATURE
 
+#define SAFETY_HUMIDITY_THRESHOLD
+#define SAFETY_LIGHT_THRESHOLD
+#define SAFETY_TEMPERATURE_THRESHOLD
+
 /*##### Error Flags #####*/
+//TODO: Make an array with index lookups... much cleaner lmao
 int eflag_bica = 0;
 int eflag_disp = 0;
 int eflag_serial = 0;
 int eflag_setup = 0;
+int eflag_ca = 0;
 
 /*##### Debug Button #####*/
 int debug_button_prev = false;
@@ -75,7 +88,7 @@ void bcu_bica_on_nullptr(unsigned char message_id, int type, int index_found){
 
 /*##### Helper Functions #####*/
 int have_errors(){
-  return eflag_bica || eflag_disp || eflag_serial || eflag_setup;
+  return eflag_bica || eflag_disp || eflag_serial || eflag_setup || eflag_ca;
 }
 
 void clear_errors(){
@@ -83,6 +96,7 @@ void clear_errors(){
   eflag_disp = 0;
   eflag_serial = 0;
   eflag_setup = 0;
+  eflag_ca = 0;
 }
 
 /*##### Setup Functions #####*/
@@ -115,11 +129,27 @@ void setup_serial(){
 
 //int setup_safety(){}
 
-//int setup_collision_avoidance(){}
+int setup_collision_avoidance(){
+
+}
 
 //int setup_body_lights(){}
 
 /*##### Update and Loop Functions #####*/
+void loop_collision_avoidance(){
+  int readin_forward;
+  int readin_down;
+
+  readin_forward = analogRead(BCU_PIN_CA_FORWARD);
+  readin_down = analogRead(BCU_PIN_CA_DOWN);
+
+  // very simple direct override for now. 
+  //TODO May need to implement some form of noise filter (multiple readings in a row?) if becomes a problem.
+  ca_override_flag = 0;
+  ca_override_flag += (readin_forward < CA_THRESHOLD)*CA_MASK_FORWARD;
+  ca_override_flag += (readin_down < CA_THRESHOLD)*CA_MASK_DOWN;
+}
+
 void update_error_display(){
   if(have_errors())
     digitalWrite(BCU_PIN_ERROR_LED, HIGH);
@@ -216,6 +246,7 @@ void setup(){
   setup_display();
   setup_pins();
   setup_serial();
+  setup_collision_avoidance();
   eflag_setup = have_errors();
   update_error_display();
   // Halt on setup error
@@ -225,6 +256,7 @@ void setup(){
 void loop(){
   loop_process_messages();
   update_error_display();
+  loop_collision_avoidance();
   loop_debug_button(); //After error_display
   loop_display(); //must be last
   delay(10);
