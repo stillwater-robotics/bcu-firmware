@@ -21,7 +21,7 @@
 
 /* Timing */
 #define LOOP_DELAY 10
-#define DISPLAY_UPDATE_DELAY 200
+#define DISPLAY_UPDATE_DELAY 100
 #define DISPLAY_SWAP_DELAY 2000
 #define DISPLAY_SWAP_DELAY_MAIN 4000
 #define ALIVE_LIGHT_DELAY_ON 200
@@ -33,13 +33,16 @@ int loops_to_update, loops_to_swap, loops_to_alive_light;
 #define EOK         0
 
 /* Text Update - Shared Variables */
-#define DISP_HEADER "BCU Firmware     v1.0"
+#define DISP_HEADER "BCU Firmware    v1.0"
 #define DISP_BUFFER_SIZE 21
 #define DISP_WIDTH 128
 #define DISP_HEIGHT 32
 #define DISP_ADDRESS 0x3C
 char disp_buffer[3][DISP_BUFFER_SIZE];
 int debug_led_a, debug_led_b, error_led;
+int current_screen;
 
+/* Serial Comms */
+#define BAUD_RATE 9600
 
 #endif
