@@ -2,6 +2,8 @@
 #define _BCU_COMMON
 
 /* Digital Pinout */
+// 0 (RX)
+// 1 (TX)
 #define P_IN1           2
 #define P_IN2           3
 #define P_IN3           4
@@ -10,14 +12,20 @@
 #define P_DEBUG_BUTTON  7
 #define P_RELAY_12V     8
 #define P_RELAY_5V      9
-#define P_BODY_LED      10
-#define P_DEBUG_LED_A   11
-#define P_DEBUG_LED_B   12
+#define P_ESC_L         10
+#define P_ESC_R         11
+//#define P_BODY_LED      12
 #define P_ERROR_LED     13
 
 /* Analog Pinout */
-#define P_COLLISION_AVOIDANCE_FORWARD   A0
-#define P_COLLISION_AVOIDANCE_DOWN      A1
+#define P_DEBUG_LED_A                   A0
+#define P_DEBUG_LED_B                   A1
+#define P_COLLISION_AVOIDANCE_FORWARD   A2
+#define P_COLLISION_AVOIDANCE_DOWN      A3
+//A4: SDA
+//A5: SCL
+//A6 (Input Only)
+//A7 (Input Only)
 
 /* Timing */
 #define LOOP_DELAY 10

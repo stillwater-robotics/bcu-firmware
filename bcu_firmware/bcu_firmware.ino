@@ -24,6 +24,7 @@
 #include "bcu_sensors.h"
 #include "bcu_power.h"
 #include "bcu_main_page.h"
+#include "bcu_debug.h"
 
 /* Display */
 Adafruit_SSD1306 display(DISP_WIDTH, DISP_HEIGHT, &Wire, -1);
@@ -44,8 +45,8 @@ void write_display(){
     for(int i = 0; i < 3; i++){
       display.setCursor(0, 10*i);
       display.println(disp_buffer[i]);
-      Serial.print("Buffer: ");
-      Serial.println(disp_buffer[i]);
+//      Serial.print("Buffer: ");
+//      Serial.println(disp_buffer[i]);
     }
     display.display();
     digitalWrite(P_DEBUG_LED_A, debug_led_a);
@@ -69,12 +70,20 @@ struct _subsystem{
 // set_status_text should set disp_buffer[][] and potentially debug_led_b.
 // set_debug_text should set disp_buffer[][] and potentially debug_leb_a and debug_led_b
 // set_error_text should set disp_buffer[][].
-#define SUBSYSTEM_COUNT 3
+#define SUBSYSTEM_COUNT 4
 const struct _subsystem subsystem_registry[SUBSYSTEM_COUNT]{
   {main_page_setup, main_page_loop, main_page_status_text, main_page_debug_text, main_page_error_text}, // Main Display Page & Display Setup
   {sensor_setup, sensor_loop, sensor_status_text, sensor_debug_text, sensor_error_text}, //Safety/Collision Avoidance System
-  {power_setup, power_loop, power_status_text, power_debug_text, power_error_text} //Power System
+  {power_setup, power_loop, power_status_text, power_debug_text, power_error_text}, //Power System
+  //INSERT MORE HERE
+  {debug_setup, debug_loop, debug_status_text, debug_debug_text, debug_error_text} // Debugging System (KEEP AS LAST)
 };
+#define MAIN_PAGE_SYS_NUM 0
+#define SENSOR_SYS_NUM 1
+#define POWER_SYS_NUM 2
+//INSERT MORE HERE
+#define DEBUG_SYS_NUM 3 //SUBSYSTEM_COUNT -1 
+int prev_err[SUBSYSTEM_COUNT];
 
 /** Setup
  * @brief Arduino setup function. Initializes all subsystems and freezes on error.
@@ -119,7 +128,12 @@ void loop(){
   int err_count = 0;
   for(int i = 0; i< SUBSYSTEM_COUNT; i++){
     err[i] = subsystem_registry[i].loop();
-    if(err[i] != EOK) err_count++;
+    if(err[i] != EOK){ 
+      err_count++;
+      if(err[i] != prev_err[i])
+        log_error(i, err[i]);
+    }
+    prev_err[i] = err[i];
   }
 
   // Update alive light (now, so that is can be overwritten by debug screens)
@@ -127,9 +141,15 @@ void loop(){
     debug_led_a = (debug_led_a == HIGH)? LOW: HIGH;
     loops_to_alive_light = ((debug_led_a == HIGH)? ALIVE_LIGHT_DELAY_ON: ALIVE_LIGHT_DELAY_OFF)/LOOP_DELAY;
   }
-
-  // Update Error LED
+  
+  // Update Error LED based on err_count
   error_led = (err_count > 0)? HIGH: LOW;
+  if(err_count > 0){
+    error_led = HIGH;
+    err[DEBUG_SYS_NUM] = 1; //Hardcoded so that this displays, even with errors.
+  }else{
+    error_led = LOW;
+  }
 
   // Get debug state
   bool debug = (digitalRead(P_DEBUG_BUTTON) == HIGH)? true: false;
@@ -146,9 +166,9 @@ void loop(){
   // ERRORS
   }else if(err_count > 0 && loops_to_update <= 0){ 
     int index;
-    for (int i = 0; i < SUBSYSTEM_COUNT; i++){
+    for (int i = 0; i < SUBSYSTEM_COUNT+1; i++){
       // Find starting (skip ahead one if time to swap)
-      index = (i + current_screen + (loops_to_swap <= 0)?1:0)%SUBSYSTEM_COUNT;
+      index = (i + current_screen + ((loops_to_swap <= 0)?1:0))%SUBSYSTEM_COUNT;
       if(err[index] != EOK){
         next_screen = index;
         subsystem_registry[index].set_error_text(disp_buffer, err[index]);

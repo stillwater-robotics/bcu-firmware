@@ -4,18 +4,21 @@
 
 int relay_5V, relay_12V;
 
+#define RELAY_ON LOW
+#define RELAY_OFF HIGH
+
 int power_setup(){
     pinMode(P_RELAY_12V, OUTPUT);
     pinMode(P_RELAY_5V, OUTPUT);
-    relay_5V = LOW;
-    relay_12V = LOW;
+    relay_5V = RELAY_OFF;
+    relay_12V = RELAY_OFF;
     return EOK;
 }
 
 int power_loop(){
     //TODO: Power/Safety Loop
-    relay_5V = HIGH;
-    relay_12V = HIGH;
+    relay_5V = RELAY_ON;
+    relay_12V = RELAY_ON;
     digitalWrite(P_RELAY_5V, relay_5V);
     digitalWrite(P_RELAY_12V, relay_12V);
     return EOK;
@@ -23,8 +26,8 @@ int power_loop(){
 
 void power_status_text(char disp_buffer[3][DISP_BUFFER_SIZE]){
     snprintf(disp_buffer[0], DISP_BUFFER_SIZE, DISP_HEADER);
-    snprintf(disp_buffer[1], DISP_BUFFER_SIZE, "Power System: %s", (relay_5V == HIGH && relay_12V == HIGH)? "ON": "CUT");
-    snprintf(disp_buffer[2], DISP_BUFFER_SIZE, "5V: %c | 12V: %c", (relay_5V == HIGH)? '#':'-', (relay_12V == HIGH)? '#':'-');
+    snprintf(disp_buffer[1], DISP_BUFFER_SIZE, "Power System: %s", (relay_5V == RELAY_ON && relay_12V == RELAY_ON)? "ON": "CUT");
+    snprintf(disp_buffer[2], DISP_BUFFER_SIZE, "5V: %c | 12V: %c", (relay_5V == RELAY_ON)? '#':'-', (relay_12V == RELAY_ON)? '#':'-');
 }
 
 void power_debug_text(char disp_buffer [3][DISP_BUFFER_SIZE]){
