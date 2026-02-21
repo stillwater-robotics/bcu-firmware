@@ -11,12 +11,15 @@
  * This file represents the core firmware and display/status software used on the agent's BCU.
  */
 
-/* Arduino Libraries */
+/* Arduino Libraries */ //34/56
+// #define USE_DISPLAY_1 /* Adafruit Library (LEGACY) +36% Program Storage Space, +15% Dynamic Space */ 
+#define USE_DISPLAY_2 /* U8x8 Library  (PREFFERED) +17% Program Storage Space, +19% Dynamic Space */ 
+
+
 #ifdef ARDUINO
 #include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
 #endif
+
 #include "base-internal-com-api/bica.h"
 #include "bcu_common.h"
 #include "bcu_communication.h"
@@ -27,7 +30,23 @@
 #include "bcu_debug.h"
 
 /* Display */
-Adafruit_SSD1306 display(DISP_WIDTH, DISP_HEIGHT, &Wire, -1);
+#ifdef USE_DISPLAY_1
+  #ifdef ARDUINO
+    #include <Adafruit_GFX.h>
+    #include <Adafruit_SSD1306.h>
+  #endif
+  Adafruit_SSD1306 display(DISP_WIDTH, DISP_HEIGHT, &Wire, -1);
+#endif
+#ifdef USE_DISPLAY_2
+  #ifdef ARDUINO
+    #include <U8x8lib.h>
+  #endif
+  U8X8_SSD1306_128X32_UNIVISION_HW_I2C display(/* reset=*/ U8X8_PIN_NONE);
+  #define FONT_BOLD u8x8_font_amstrad_cpc_extended_f
+  #define FONT u8x8_font_5x8_r
+#endif
+
+
 bool display_status;
 
 /** write_display
@@ -35,6 +54,7 @@ bool display_status;
  * 
  */
 void write_display(){
+#if defined(USE_DISPLAY_1)
   if(display_status == false){
     digitalWrite(P_ERROR_LED, HIGH);
     digitalWrite(P_DEBUG_LED_B, HIGH);
@@ -45,14 +65,32 @@ void write_display(){
     for(int i = 0; i < 3; i++){
       display.setCursor(0, 10*i);
       display.println(disp_buffer[i]);
-//      Serial.print("Buffer: ");
-//      Serial.println(disp_buffer[i]);
     }
     display.display();
     digitalWrite(P_DEBUG_LED_A, debug_led_a);
     digitalWrite(P_DEBUG_LED_B, debug_led_b);
     digitalWrite(P_ERROR_LED, error_led); 
   }
+#elif defined(USE_DISPLAY_2)
+  if(display_status == false){
+    digitalWrite(P_ERROR_LED, HIGH);
+    digitalWrite(P_DEBUG_LED_B, HIGH);
+  }else{
+    display.setFont(FONT_BOLD);
+    display.drawString(0, 0, disp_buffer[0]);
+    display.setFont(FONT);
+    for(int i = 1; i < 3; i++)
+      display.drawString(0, i, disp_buffer[i]);
+    display.display();
+    digitalWrite(P_DEBUG_LED_A, debug_led_a);
+    digitalWrite(P_DEBUG_LED_B, debug_led_b);
+    digitalWrite(P_ERROR_LED, error_led); 
+  }
+#else
+  digitalWrite(P_DEBUG_LED_A, debug_led_a);
+  digitalWrite(P_DEBUG_LED_B, debug_led_b);
+  digitalWrite(P_ERROR_LED, error_led); 
+#endif
 }
 
 /* Subsystem Management */
@@ -90,7 +128,11 @@ int prev_err[SUBSYSTEM_COUNT];
  */
 void setup(){
   // Setup display. Non-Blocking on Failure.
+#if defined(USE_DISPLAY_1)
   display_status = display.begin(SSD1306_SWITCHCAPVCC, DISP_ADDRESS);
+#elif defined(USE_DISPLAY_2)
+  display_status = display.begin();
+#endif
 
   //Setup Serial (TO BE MOVED)
   Serial.begin(BAUD_RATE);

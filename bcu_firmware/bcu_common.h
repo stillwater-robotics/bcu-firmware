@@ -22,10 +22,10 @@
 #define P_DEBUG_LED_B                   A1
 #define P_COLLISION_AVOIDANCE_FORWARD   A2
 #define P_COLLISION_AVOIDANCE_DOWN      A3
-//A4: SDA
-//A5: SCL
-//A6 (Input Only)
-//A7 (Input Only)
+//A4: SDA (In Use)
+//A5: SCL (In Use)
+//A6 (Free, Input Only)
+//A7 (Free, Input Only)
 
 /* Timing */
 #define LOOP_DELAY 10
