@@ -24,22 +24,36 @@ int power_loop(){
     return EOK;
 }
 
-void power_status_text(char disp_buffer[3][DISP_BUFFER_SIZE]){
-    snprintf(disp_buffer[0], DISP_BUFFER_SIZE, DISP_HEADER);
-    snprintf(disp_buffer[1], DISP_BUFFER_SIZE, "Power System: %s", (relay_5V == RELAY_ON && relay_12V == RELAY_ON)? "ON": "CUT");
-    snprintf(disp_buffer[2], DISP_BUFFER_SIZE, "5V: %c | 12V: %c", (relay_5V == RELAY_ON)? '#':'-', (relay_12V == RELAY_ON)? '#':'-');
+void power_status_text(){
+    char disp_buffer[DISP_BUFFER_SIZE];
+    display.setFont(FONT_BOLD);
+    display.drawString(0, 0, DISP_HEADER);
+    display.setFont(FONT);
+    display.drawString(0, 1, "Power System");
+    snprintf(disp_buffer, DISP_BUFFER_SIZE, "5V: %s", (relay_5V == RELAY_ON)? "ON": "CUT");
+    display.drawString(0, 2, disp_buffer);
+    snprintf(disp_buffer, DISP_BUFFER_SIZE, "12V: %s", (relay_12V == RELAY_ON)? "ON": "CUT");
+    display.drawString(0, 3, disp_buffer);
 }
 
-void power_debug_text(char disp_buffer [3][DISP_BUFFER_SIZE]){
-    snprintf(disp_buffer[0], DISP_BUFFER_SIZE, "POWER DEBUG");
-    snprintf(disp_buffer[1], DISP_BUFFER_SIZE, "relay_5V: %d", relay_5V);
-    snprintf(disp_buffer[2], DISP_BUFFER_SIZE, "relay_12V: %d", relay_12V);
+void power_debug_text(){
+    char disp_buffer[DISP_BUFFER_SIZE];
+    display.setFont(FONT_BOLD);
+    display.drawString(0, 0, "POWER DEBUG");
+    display.setFont(FONT);
+    snprintf(disp_buffer, DISP_BUFFER_SIZE, "On State: %s", (RELAY_ON == LOW)?"LOW":"HIGH");
+    display.drawString(0, 1, disp_buffer);
+    snprintf(disp_buffer, DISP_BUFFER_SIZE, "relay_5V: %d", relay_5V);
+    display.drawString(0, 2, disp_buffer);
+    snprintf(disp_buffer, DISP_BUFFER_SIZE, "relay_12V: %d", relay_12V);
+    display.drawString(0, 3, disp_buffer);
 }
 
-void power_error_text(char disp_buffer [3][DISP_BUFFER_SIZE], int err){
-    snprintf(disp_buffer[0], DISP_BUFFER_SIZE, "!ERROR! POWER");
-    snprintf(disp_buffer[1], DISP_BUFFER_SIZE, "E:%d", err);
-    snprintf(disp_buffer[2], DISP_BUFFER_SIZE, "<todo>");
+void power_error_text(){
+    display.setFont(FONT_BOLD);
+    display.drawString(0, 0, "!ERROR! POWER");
+    display.drawString(0, 2, "this should be");
+    display.drawString(0, 3, "impossible.");
 }
 
 #endif

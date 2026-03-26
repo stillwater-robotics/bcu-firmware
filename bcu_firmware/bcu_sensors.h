@@ -22,28 +22,42 @@ int sensor_loop(){
     return EOK;
 }
 
-void sensor_status_text(char disp_buffer[3][DISP_BUFFER_SIZE]){
-    char bufa[10], bufb[10];
+void sensor_status_text(){
+    char bufa[10], bufb[10], disp_buffer[DISP_BUFFER_SIZE];
     dtostrf(DHT.temperature,0,0,bufa);
     dtostrf(DHT.humidity,0,0,bufb);
-    snprintf(disp_buffer[0], DISP_BUFFER_SIZE, DISP_HEADER);
-    snprintf(disp_buffer[1], DISP_BUFFER_SIZE, "Safety  <CA HERE>"); //TODO
-    snprintf(disp_buffer[2], DISP_BUFFER_SIZE, "Temp: %sC Humid: %s%%", bufa, bufb);
+
+    display.setFont(FONT_BOLD);
+    display.drawString(0, 0, DISP_HEADER);
+    display.setFont(FONT);
+    snprintf(disp_buffer, DISP_BUFFER_SIZE, "Safety: TODO"); //TODO
+    display.drawString(0, 1, disp_buffer);
+    snprintf(disp_buffer, DISP_BUFFER_SIZE, "Temp: %sC", bufa);
+    display.drawString(0, 2, disp_buffer);
+    snprintf(disp_buffer, DISP_BUFFER_SIZE, "Humid: %s%%", bufb);
+    display.drawString(0, 3, disp_buffer);
 }
 
-void sensor_debug_text(char disp_buffer [3][DISP_BUFFER_SIZE]){
-    char bufa[10], bufb[10];
+void sensor_debug_text(){
+    char bufa[10], bufb[10], disp_buffer[DISP_BUFFER_SIZE];
     dtostrf(DHT.temperature,0,2,bufa);
     dtostrf(DHT.humidity,0,2,bufb);
-    snprintf(disp_buffer[0], DISP_BUFFER_SIZE, "SAFETY DEBUG");
-    snprintf(disp_buffer[1], DISP_BUFFER_SIZE, "temp: %s humid:%s", bufa, bufb);
-    snprintf(disp_buffer[2], DISP_BUFFER_SIZE, "down: %d forward: %d", 0, 0);
+    display.setFont(FONT);
+    snprintf(disp_buffer, DISP_BUFFER_SIZE, "Fwd: TODO");
+    display.drawString(0, 0, disp_buffer);
+    snprintf(disp_buffer, DISP_BUFFER_SIZE, "Dwn: TODO");
+    display.drawString(0, 1, disp_buffer);
+    snprintf(disp_buffer, DISP_BUFFER_SIZE, "Temp: %sC", bufa);
+    display.drawString(0, 2, disp_buffer);
+    snprintf(disp_buffer, DISP_BUFFER_SIZE, "Humid: %s%%", bufb);
+    display.drawString(0, 3, disp_buffer);
 }
 
-void sensor_error_text(char disp_buffer [3][DISP_BUFFER_SIZE], int err){
-    snprintf(disp_buffer[0], DISP_BUFFER_SIZE, "!ERROR! SAFETY");
-    snprintf(disp_buffer[1], DISP_BUFFER_SIZE, "E:%d", err);
-    snprintf(disp_buffer[2], DISP_BUFFER_SIZE, "<todo>");
+void sensor_error_text(){
+    display.setFont(FONT_BOLD);
+    display.drawString(0, 0, "!ERROR! SENSORS");
+    display.drawString(0, 2, "this should be");
+    display.drawString(0, 3, "impossible.");
 }
 
 #endif
