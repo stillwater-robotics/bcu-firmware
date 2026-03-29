@@ -25,7 +25,7 @@ int power_loop(){
 }
 
 void power_status_text(){
-    char disp_buffer[DISP_BUFFER_SIZE];
+    // char disp_buffer[DISP_BUFFER_SIZE];
     display.setFont(FONT_BOLD);
     display.drawString(0, 0, DISP_HEADER);
     display.setFont(FONT);
@@ -37,7 +37,7 @@ void power_status_text(){
 }
 
 void power_debug_text(){
-    char disp_buffer[DISP_BUFFER_SIZE];
+    // char disp_buffer[DISP_BUFFER_SIZE];
     display.setFont(FONT_BOLD);
     display.drawString(0, 0, "POWER DEBUG");
     display.setFont(FONT);
@@ -47,13 +47,6 @@ void power_debug_text(){
     display.drawString(0, 2, disp_buffer);
     snprintf(disp_buffer, DISP_BUFFER_SIZE, "relay_12V: %d", relay_12V);
     display.drawString(0, 3, disp_buffer);
-}
-
-void power_error_text(){
-    display.setFont(FONT_BOLD);
-    display.drawString(0, 0, "!ERROR! POWER");
-    display.drawString(0, 2, "this should be");
-    display.drawString(0, 3, "impossible.");
 }
 
 #endif

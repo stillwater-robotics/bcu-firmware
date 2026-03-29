@@ -40,14 +40,14 @@ void write_display(){
     }else{
       if(disp_write_func != prev_write_func)
         display.clear();
-      if(disp_write_func){
+      if(disp_write_func != nullptr){
         disp_write_func();
         prev_write_func = disp_write_func;
       }else{
         display.setFont(FONT_BOLD);
         display.drawString(0, 0, DISP_HEADER);
         display.setFont(FONT);
-        display.drawString(0, 1, "   --ERROR--   ");
+        display.drawString(0, 1, "   --?????--   ");
         display.drawString(0, 2, " no screen set ");
       }
       display.display();
@@ -63,19 +63,23 @@ void write_display(){
 // Register subsystems here in order of processing.
 // Subsytems need a setup and loop processing function,
 // as well as 3 info setting functions, which should write to display directly, but not call display.display();
-#define SUBSYSTEM_COUNT 4
+#define SUBSYSTEM_COUNT 6
 const struct _subsystem subsystem_registry[SUBSYSTEM_COUNT]{
-  {main_page_setup, main_page_loop, main_page_status_text, main_page_debug_text, main_page_error_text}, // Main Display Page & Display Setup
+  {main_page_setup, main_page_loop, main_page_status_text, main_page_debug_text, nullptr}, // Main Display Page & Display Setup
   {sensor_setup, sensor_loop, sensor_status_text, sensor_debug_text, sensor_error_text}, //Safety/Collision Avoidance System
-  {power_setup, power_loop, power_status_text, power_debug_text, power_error_text}, //Power System
+  {power_setup, power_loop, power_status_text, power_debug_text, nullptr}, //Power System
   //INSERT MORE HERE
+  {communication_setup, communication_loop, communication_status_text, communication_debug_text, communication_error_text},
+  {control_setup, control_loop, control_text, control_debug_text, nullptr},
   {debug_setup, debug_loop, debug_status_text, debug_debug_text, debug_error_text} // Debugging System (KEEP AS LAST)
 };
 #define MAIN_PAGE_SYS_NUM 0
 #define SENSOR_SYS_NUM 1
 #define POWER_SYS_NUM 2
+#define COMM_SYS_NUM 3
+#define CONTROL_SYS_NUM 4
 //INSERT MORE HERE
-#define DEBUG_SYS_NUM 3 //SUBSYSTEM_COUNT -1 
+#define DEBUG_SYS_NUM (SUBSYSTEM_COUNT -1)
 int prev_err[SUBSYSTEM_COUNT];
 
 /** Setup
@@ -86,6 +90,13 @@ void setup(){
   display_status = display.begin();
   disp_write_func = nullptr;
   prev_write_func = nullptr;
+
+  if(display_status){
+    display.clear();
+    display.setFont(FONT_BOLD);
+    display.drawString(0, 1, "   BOOTING   ");
+    display.display();
+  }
 
   //Setup Serial (TO BE MOVED)
   Serial.begin(BAUD_RATE);
@@ -138,7 +149,6 @@ void loop(){
   }
   
   // Update Error LED based on err_count
-  error_led = (err_count > 0)? HIGH: LOW;
   if(err_count > 0){
     error_led = HIGH;
     err[DEBUG_SYS_NUM] = 1; //Hardcoded so that this displays, even with errors.
@@ -185,7 +195,7 @@ void loop(){
   // Clean up and decrement loop variables
   if(!debug){
     if(loops_to_swap <= 0)
-      loops_to_swap = ((next_screen == 0)? DISPLAY_SWAP_DELAY_MAIN : DISPLAY_SWAP_DELAY) / LOOP_DELAY;
+      loops_to_swap = ((next_screen == 0 || err_count > 0)? DISPLAY_SWAP_DELAY_MAIN :DISPLAY_SWAP_DELAY) / LOOP_DELAY;
     loops_to_swap--;
   }
   

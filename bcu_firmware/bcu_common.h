@@ -1,6 +1,8 @@
 #ifndef _BCU_COMMON
 #define _BCU_COMMON
 
+#include <avr/pgmspace.h>
+
 /* Digital Pinout */
 // 0 (RX)
 // 1 (TX)
@@ -60,7 +62,7 @@ int loops_to_update, loops_to_swap, loops_to_alive_light;
 
 /* Text Update - Shared Variables */
 #define DISP_HEADER "BCU         V2.0"
-#define DISP_BUFFER_SIZE 15
+#define DISP_BUFFER_SIZE 17
 #define DISP_WIDTH 128
 #define DISP_HEIGHT 32
 #define DISP_ADDRESS 0x3C
@@ -78,6 +80,7 @@ U8X8_SSD1306_128X32_UNIVISION_HW_I2C display(/* reset=*/ U8X8_PIN_NONE);
 #define DISPLAY_TYPE U8X8_SSD1306_128X32_UNIVISION_HW_I2C
 
 bool display_status;
+char disp_buffer[DISP_BUFFER_SIZE];
 
 /* BICA Serial Comms */
 #include "base-internal-com-api/bica.h"

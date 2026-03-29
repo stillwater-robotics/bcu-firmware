@@ -23,7 +23,7 @@ int sensor_loop(){
 }
 
 void sensor_status_text(){
-    char bufa[10], bufb[10], disp_buffer[DISP_BUFFER_SIZE];
+    char bufa[10], bufb[10];
     dtostrf(DHT.temperature,0,0,bufa);
     dtostrf(DHT.humidity,0,0,bufb);
 
@@ -39,7 +39,7 @@ void sensor_status_text(){
 }
 
 void sensor_debug_text(){
-    char bufa[10], bufb[10], disp_buffer[DISP_BUFFER_SIZE];
+    char bufa[10], bufb[10]; 
     dtostrf(DHT.temperature,0,2,bufa);
     dtostrf(DHT.humidity,0,2,bufb);
     display.setFont(FONT);
