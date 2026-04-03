@@ -40,7 +40,7 @@ int communication_setup(){
     Serial.begin(BAUD_RATE);
 
     // Setup comms 
-    int error = init_bica_control_bcu(bcu_send_callback, bcu_controller_callback_states, bcu_controller_callback_inputs);
+    int error = init_bica_control_bcu(bcu_send_callback, bcu_controller_callback_states, bcu_controller_callback_inputs, get_inputs);
     if(error != EOK){
         comm_recent_error = EBICA_INIT;
         return EBICA_INIT;
@@ -90,24 +90,21 @@ int communication_loop(){
 const char comm_string_0[] PROGMEM = "Communications";
 const char comm_string_1[] PROGMEM = "Latest:";
 const char comm_string_2[] PROGMEM = "!ERROR! COMMS";
-const char comm_string_3[] PROGMEM = "Serial";
-const char comm_string_4[] PROGMEM = "Disconnected";
-const char comm_string_5[] PROGMEM = "err=0x10";
-const char comm_string_6[] PROGMEM = "BICA Bad Lookup";
-const char comm_string_7[] PROGMEM = "err=0x23";
-const char comm_string_8[] PROGMEM = "BICA Failed to";
-const char comm_string_9[] PROGMEM = "Initialize.";
-const char comm_string_10[] PROGMEM = "err=0x21";
-const char comm_string_11[] PROGMEM = "BICA Unknown Err";
+
+const char * const comm_str_table[] PROGMEM = {
+    comm_string_0,
+    comm_string_1,
+    comm_string_2
+};
 
 void communication_status_text(){
     // char disp_buffer[DISP_BUFFER_SIZE];
     display.setFont(FONT_BOLD);
     display.drawString(0, 0, DISP_HEADER);
     display.setFont(FONT);
-    strcpy_P(disp_buffer, (char *)pgm_read_ptr(comm_string_0));
+    strcpy_P(disp_buffer, (char *)pgm_read_ptr(&(comm_str_table[0])));
     display.drawString(0, 1, disp_buffer);
-    strcpy_P(disp_buffer, (char *)pgm_read_ptr(comm_string_1));
+    strcpy_P(disp_buffer, (char *)pgm_read_ptr(&(comm_str_table[1])));
     display.drawString(0, 2, disp_buffer);
     snprintf(disp_buffer, DISP_BUFFER_SIZE, "RX: 0x%02x |TX: 0x%02x", msg_in_buffer[0], msg_out_buffer[0]);
     display.drawString(0, 3, disp_buffer);
@@ -127,45 +124,18 @@ void communication_debug_text(){
 void communication_error_text(){ 
     // char disp_buffer[DISP_BUFFER_SIZE];
     display.setFont(FONT_BOLD);
-    strcpy_P(disp_buffer, (char *)pgm_read_ptr(comm_string_2));
+    strcpy_P(disp_buffer, (char *)pgm_read_ptr(&(comm_str_table[2])));
     display.drawString(0, 0, disp_buffer);
     display.setFont(FONT);
-    switch(comm_recent_error){
-        case ESERIAL:
-        case ESERIAL_CONNECT:
-            strcpy_P(disp_buffer, (char *)pgm_read_ptr(comm_string_3));
-            display.drawString(0, 1, disp_buffer);
-            strcpy_P(disp_buffer, (char *)pgm_read_ptr(comm_string_4));
-            display.drawString(0, 2, disp_buffer);
-            strcpy_P(disp_buffer, (char *)pgm_read_ptr(comm_string_5));
-            display.drawString(0, 3, disp_buffer);
-        break;
-        case EBICA_LOOKUP:
-            strcpy_P(disp_buffer, (char *)pgm_read_ptr(comm_string_6));
-            display.drawString(0, 1, disp_buffer);
-            snprintf(disp_buffer, DISP_BUFFER_SIZE, "msg 0x%02x t=%c", e_badlookup_id, e_badlookup_type == BICAT_CREATE? 'c': 'p');
-            display.drawString(0, 2, disp_buffer);
-            strcpy_P(disp_buffer, (char *)pgm_read_ptr(comm_string_7));
-            display.drawString(0, 3, disp_buffer);
-        break;
-        case EBICA_INIT:
-            strcpy_P(disp_buffer, (char *)pgm_read_ptr(comm_string_8));
-            display.drawString(0, 1, disp_buffer);
-            strcpy_P(disp_buffer, (char *)pgm_read_ptr(comm_string_9));
-            display.drawString(0, 2, disp_buffer);
-            strcpy_P(disp_buffer, (char *)pgm_read_ptr(comm_string_10));
-            display.drawString(0, 3, disp_buffer);
-           
-        break;
-        default:
-            strcpy_P(disp_buffer, (char *)pgm_read_ptr(comm_string_11));
-            display.drawString(0, 1, disp_buffer);
-            snprintf(disp_buffer, DISP_BUFFER_SIZE, "msg=0x%02x", e_badlookup_id);
-            display.drawString(0, 2, disp_buffer);
-            snprintf(disp_buffer, DISP_BUFFER_SIZE, "err=0x%02x", comm_recent_error);
-            display.drawString(0, 3, disp_buffer);
-        break;
-    }
+
+    snprintf(disp_buffer, DISP_BUFFER_SIZE, "msg 0x%02x t=%c", e_badlookup_id, e_badlookup_type == BICAT_CREATE? 'c': 'p');
+    display.drawString(0, 1, disp_buffer);
+
+    snprintf(disp_buffer, DISP_BUFFER_SIZE, "err=0x%02x", comm_recent_error);
+    display.drawString(0, 2, disp_buffer);
+    snprintf(disp_buffer, DISP_BUFFER_SIZE, "RX: 0x%02x |TX: 0x%02x", msg_in_buffer[0], msg_out_buffer[0]);
+    display.drawString(0, 3, disp_buffer);
+
 }
 
 #endif

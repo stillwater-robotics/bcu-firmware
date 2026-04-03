@@ -72,6 +72,7 @@ int debug_led_a, debug_led_b, error_led;
 int current_screen;
 
 #ifdef ARDUINO
+  #include "Wire.h"
   #include <U8x8lib.h>
 #endif
 U8X8_SSD1306_128X32_UNIVISION_HW_I2C display(/* reset=*/ U8X8_PIN_NONE);
@@ -80,7 +81,7 @@ U8X8_SSD1306_128X32_UNIVISION_HW_I2C display(/* reset=*/ U8X8_PIN_NONE);
 #define DISPLAY_TYPE U8X8_SSD1306_128X32_UNIVISION_HW_I2C
 
 bool display_status;
-char disp_buffer[DISP_BUFFER_SIZE];
+char disp_buffer[2*DISP_BUFFER_SIZE];
 
 /* BICA Serial Comms */
 #include "base-internal-com-api/bica.h"

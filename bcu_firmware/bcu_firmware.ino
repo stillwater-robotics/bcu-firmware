@@ -35,8 +35,9 @@ void (*prev_write_func)();
 void write_display(){
 
     if(display_status == false){
-      digitalWrite(P_ERROR_LED, HIGH);
+      digitalWrite(P_ERROR_LED, error_led);
       digitalWrite(P_DEBUG_LED_B, HIGH);
+      digitalWrite(P_DEBUG_LED_A, debug_led_a);
     }else{
       if(disp_write_func != prev_write_func)
         display.clear();
@@ -64,15 +65,17 @@ void write_display(){
 // Subsytems need a setup and loop processing function,
 // as well as 3 info setting functions, which should write to display directly, but not call display.display();
 #define SUBSYSTEM_COUNT 6
+
 const struct _subsystem subsystem_registry[SUBSYSTEM_COUNT]{
   {main_page_setup, main_page_loop, main_page_status_text, main_page_debug_text, nullptr}, // Main Display Page & Display Setup
   {sensor_setup, sensor_loop, sensor_status_text, sensor_debug_text, sensor_error_text}, //Safety/Collision Avoidance System
-  {power_setup, power_loop, power_status_text, power_debug_text, nullptr}, //Power System
+  {power_setup, power_loop, power_status_text, power_on_debug, nullptr}, //Power System
   //INSERT MORE HERE
   {communication_setup, communication_loop, communication_status_text, communication_debug_text, communication_error_text},
-  {control_setup, control_loop, control_text, control_debug_text, nullptr},
+  {control_setup, control_loop, control_text, control_debug_text, control_text},
   {debug_setup, debug_loop, debug_status_text, debug_debug_text, debug_error_text} // Debugging System (KEEP AS LAST)
 };
+
 #define MAIN_PAGE_SYS_NUM 0
 #define SENSOR_SYS_NUM 1
 #define POWER_SYS_NUM 2
@@ -86,8 +89,15 @@ int prev_err[SUBSYSTEM_COUNT];
  * @brief Arduino setup function. Initializes all subsystems and freezes on error.
  */
 void setup(){
+    Serial.println("Hello");
   // Setup display. Non-Blocking on Failure.
-  display_status = display.begin();
+  Wire.begin();
+  Wire.beginTransmission(DISP_ADDRESS);
+  int error = Wire.endTransmission();
+  if(error == 0)
+    display_status = display.begin();
+  else  
+    display_status = false;
   disp_write_func = nullptr;
   prev_write_func = nullptr;
 
@@ -133,6 +143,7 @@ void loop(){
   int err[SUBSYSTEM_COUNT];
   int err_count = 0;
   for(int i = 0; i< SUBSYSTEM_COUNT; i++){
+    
     err[i] = subsystem_registry[i].loop();
     if(err[i] != EOK){ 
       err_count++;
@@ -141,6 +152,7 @@ void loop(){
     }
     prev_err[i] = err[i];
   }
+  
 
   // Update alive light (now, so that is can be overwritten by debug screens)
   if(loops_to_alive_light <=0){
@@ -166,10 +178,12 @@ void loop(){
 
   // DEBUG
   if(debug){ 
+    
     disp_write_func = subsystem_registry[current_screen].set_debug_text;
   
   // ERRORS
   }else if(err_count > 0 && loops_to_update <= 0){ 
+    
     int index;
     for (int i = 0; i < SUBSYSTEM_COUNT+1; i++){
       // Find starting (skip ahead one if time to swap)
@@ -191,6 +205,7 @@ void loop(){
   // Display Update Logic
   if(loops_to_update <= 0)
     write_display();
+  
 
   // Clean up and decrement loop variables
   if(!debug){
