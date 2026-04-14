@@ -6,226 +6,222 @@
  *  
  * bcu_firmware.ino
  * Created: Oct 9, 2025
- * Last Edited: Oct 16, 2025
+ * Last Edited: Jan 14, 2026
  * 
- * This file represents all firmware used on the agent's BCU.
+ * This file represents the core firmware and display/status software used on the agent's BCU.
  */
+
+/* Arduino Libraries */
 
 #ifdef ARDUINO
 #include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
 #endif
+
 #include "base-internal-com-api/bica.h"
+#include "bcu_common.h"
+#include "bcu_communication.h"
+#include "bcu_control.h"
+#include "bcu_sensors.h"
+#include "bcu_power.h"
+#include "bcu_main_page.h"
+#include "bcu_debug.h"
 
-/*##### Display #####*/
-#define BCU_DISP_HEADER "BCU Firmware     v0.3"
-#define BCU_DISP_LINE_BUFFER_MAX 21
-#define BCU_DISP_WIDTH 128
-#define BCU_DISP_HEIGHT 32
+void (*disp_write_func)();
+void (*prev_write_func)();
+/** write_display
+ * @brief pushes the display buffer's text to the adafruit display, and updates led lights.
+ * 
+ */
+void write_display(){
 
-#define BCU_DISPID_COUNT 5
-
-#define BCU_DISPID_ERROR 0
-#define BCU_DISPID_DEBUG 1
-#define BCU_DISPID_SAFETY 2
-#define BCU_DISPID_COLLISIONAVOIDANCE_1 3
-#define BCU_DISPID_COLLISIONAVOIDANCE_2 4
-
-
-Adafruit_SSD1306 display(BCU_DISP_WIDTH, BCU_DISP_HEIGHT, &Wire, -1);
-char disp_line2_buffer[BCU_DISPID_COUNT][BCU_DISP_LINE_BUFFER_MAX];
-char disp_line3_buffer[BCU_DISP_LINE_BUFFER_MAX];
-
-#define BCU_DISP_LINE2_INTERVAL 100
-int disp_line2_current = 2;
-int disp_line2_count = 0;
-
-/*##### Serial #####*/
-#define BCU_MSG_BAUD_RATE 9600
-byte msg_in_buffer[BICA_BUFFER_LEN];
-byte msg_out_buffer[BICA_BUFFER_LEN];
-
-/*##### Pins #####*/
-#define BCU_PIN_DEBUG_BUTTON 2
-#define BCU_PIN_ERROR_LED 13
-
-#define BCU_PIN_CA_FORWARD A0
-#define BCU_PIN_CA_DOWN A1
-
-#define BCU_PIN_SAFETY_HUMIDITY_READ
-#define BCU_PIN_SAFETY_HUMIDITY_DRIVE
-#define BCU_PIN_SAFETY_LIGHT_SENSOR
-#define BCU_PIN_SAFETY_LIGHT_DRIVE
-#define BCU_PIN_SAFETY_TEMPERATURE
-
-/*##### Error Flags #####*/
-int eflag_bica = 0;
-int eflag_disp = 0;
-int eflag_serial = 0;
-int eflag_setup = 0;
-
-/*##### Debug Button #####*/
-int debug_button_prev = false;
-
-/*##### BICA Processing Functions #####*/
-void bcu_bica_on_nullptr(unsigned char message_id, int type, int index_found){
-  eflag_bica = eflag_bica & 0b10 & (type << 3) & (((int)message_id) << 8);
-}
-
-/*##### Helper Functions #####*/
-int have_errors(){
-  return eflag_bica || eflag_disp || eflag_serial || eflag_setup;
-}
-
-void clear_errors(){
-  eflag_bica = 0;
-  eflag_disp = 0;
-  eflag_serial = 0;
-  eflag_setup = 0;
-}
-
-/*##### Setup Functions #####*/
-int setup_bica(){
-  bica_on_nullptr = bcu_bica_on_nullptr;
-  eflag_bica = 0;
-}
-
-void setup_pins(){
-  pinMode(BCU_PIN_ERROR_LED, OUTPUT);
-  pinMode(BCU_PIN_DEBUG_BUTTON, INPUT);
-}
-
-int setup_display(){
-  // attempt to begin the display
-  eflag_disp = eflag_disp & ((display.begin(SSD1306_SWITCHCAPVCC, 0x3C))? 0: 0b1);
-  // setup display buffers to nothing
-  for(int i = 0; i < BCU_DISPID_COUNT; i++)
-    snprintf(disp_line2_buffer[i], BCU_DISP_LINE_BUFFER_MAX, "");
-  snprintf(disp_line3_buffer, BCU_DISP_LINE_BUFFER_MAX, "No Messages");
-}
-
-void setup_serial(){
-  Serial.begin(BCU_MSG_BAUD_RATE);
-  // Wait for 1 second to initialize Serial
-  for(int i =0; i < 10 && !Serial; i++)
-    delay(100);
-  eflag_serial = !Serial;
-}
-
-//int setup_safety(){}
-
-//int setup_collision_avoidance(){}
-
-//int setup_body_lights(){}
-
-/*##### Update and Loop Functions #####*/
-void update_error_display(){
-  if(have_errors())
-    digitalWrite(BCU_PIN_ERROR_LED, HIGH);
-  
-  if(eflag_setup)
-    snprintf(disp_line3_buffer, BCU_DISP_LINE_BUFFER_MAX, "Setup Error | Halt");
-  
-  if(eflag_bica){
-    snprintf(disp_line2_buffer[BCU_DISPID_ERROR],BCU_DISP_LINE_BUFFER_MAX,"BICA Error %x", eflag_bica);
-    return;
-  }
-  if(eflag_disp){
-    snprintf(disp_line2_buffer[BCU_DISPID_ERROR],BCU_DISP_LINE_BUFFER_MAX,"DISP Error %x", eflag_disp);
-    return;
-  }
-  if(eflag_serial){
-    snprintf(disp_line2_buffer[BCU_DISPID_ERROR],BCU_DISP_LINE_BUFFER_MAX,"Serial Error %x", eflag_serial);
-    return;
-  }
-}
-
-void loop_process_messages(){
-  if(!Serial){
-    snprintf(disp_line3_buffer, BCU_DISP_LINE_BUFFER_MAX, "Serial Disconnect");
-    eflag_serial = eflag_serial & 0b10;
-  }else{
-    eflag_serial = eflag_serial & (~0b10);
-    while(Serial.available() >= BICA_BUFFER_LEN){
-      // Read in message
-      for(int i = 0; i < BICA_BUFFER_LEN; i++)
-        msg_in_buffer[i] = (byte)Serial.read();
-
-      // Display all read in messages
-      if(BICA_BUFFER_LEN > 0)
-        snprintf(disp_line3_buffer, BCU_DISP_LINE_BUFFER_MAX, "R%02x ", msg_in_buffer[0]);
-      for(int i = 1; i < BICA_BUFFER_LEN; i++)
-        snprintf(disp_line3_buffer, BCU_DISP_LINE_BUFFER_MAX, "%s%02x", disp_line3_buffer, msg_in_buffer[i]);
-      
-      _bica_m_function_ptr func;
-      func = bica_get_function(msg_in_buffer[0], BICAT_PROCESS);
-      if(func != nullptr && func)
-        func(msg_in_buffer, BICA_BUFFER_LEN, nullptr);
-    }
-  }
-}
-
-void loop_debug_button(){
-  int debug_button = digitalRead(BCU_PIN_DEBUG_BUTTON) == HIGH;
-  if(debug_button && !debug_button_prev){
-    disp_line2_current = BCU_DISPID_DEBUG;
-    if(have_errors()){
-      snprintf(disp_line2_buffer[BCU_DISPID_DEBUG], BCU_DISP_LINE_BUFFER_MAX, "Debug Clearing Error");
-      clear_errors();
+    if(display_status == false){
+      digitalWrite(P_ERROR_LED, error_led);
+      digitalWrite(P_DEBUG_LED_B, HIGH);
+      digitalWrite(P_DEBUG_LED_A, debug_led_a);
     }else{
-      snprintf(disp_line2_buffer[BCU_DISPID_DEBUG], BCU_DISP_LINE_BUFFER_MAX, "Debug Pressed"); 
+      if(disp_write_func != prev_write_func)
+        display.clear();
+      if(disp_write_func != nullptr){
+        disp_write_func();
+        prev_write_func = disp_write_func;
+      }else{
+        display.setFont(FONT_BOLD);
+        display.drawString(0, 0, DISP_HEADER);
+        display.setFont(FONT);
+        display.drawString(0, 1, "   --?????--   ");
+        display.drawString(0, 2, " no screen set ");
+      }
+      display.display();
+      digitalWrite(P_DEBUG_LED_A, debug_led_a);
+      digitalWrite(P_DEBUG_LED_B, debug_led_b);
+      digitalWrite(P_ERROR_LED, error_led); 
     }
-
-  }else if(!debug_button && debug_button_prev){
-    disp_line2_current = BCU_DISPID_SAFETY;
-    disp_line2_count = 0;
-  }
-  debug_button_prev = debug_button;
+  
 }
 
-void loop_display() {
-  // Clear the display
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  // Line 1
-  display.setCursor(0, 0);
-  display.println(BCU_DISP_HEADER);
-  //Line 2
-  if(disp_line2_current > BCU_DISPID_DEBUG){
-    disp_line2_count++;
-    if(disp_line2_count > BCU_DISP_LINE2_INTERVAL){
-      disp_line2_current++;
-      disp_line2_count = 0;
-    }
-    if(disp_line2_current >= BCU_DISPID_COUNT) 
-      disp_line2_current = BCU_DISPID_SAFETY;
-  }
-  display.setCursor(0, 10);
-  display.println(disp_line2_buffer[disp_line2_current]);
-  //Line 3
-  display.setCursor(0, 20);
-  display.println(String(disp_line3_buffer));
-  // Show text on screen
-  display.display(); 
-}
+/* Subsystem Management */
 
+// Register subsystems here in order of processing.
+// Subsytems need a setup and loop processing function,
+// as well as 3 info setting functions, which should write to display directly, but not call display.display();
+#define SUBSYSTEM_COUNT 6
+
+const struct _subsystem subsystem_registry[SUBSYSTEM_COUNT]{
+  {main_page_setup, main_page_loop, main_page_status_text, main_page_debug_text, nullptr}, // Main Display Page & Display Setup
+  {sensor_setup, sensor_loop, sensor_status_text, sensor_debug_text, sensor_error_text}, //Safety/Collision Avoidance System
+  {power_setup, power_loop, power_status_text, power_on_debug, nullptr}, //Power System
+  //INSERT MORE HERE
+  {communication_setup, communication_loop, communication_status_text, communication_debug_text, communication_error_text},
+  {control_setup, control_loop, control_text, control_debug_text, control_text},
+  {debug_setup, debug_loop, debug_status_text, debug_debug_text, debug_error_text} // Debugging System (KEEP AS LAST)
+};
+
+#define MAIN_PAGE_SYS_NUM 0
+#define SENSOR_SYS_NUM 1
+#define POWER_SYS_NUM 2
+#define COMM_SYS_NUM 3
+#define CONTROL_SYS_NUM 4
+//INSERT MORE HERE
+#define DEBUG_SYS_NUM (SUBSYSTEM_COUNT -1)
+int prev_err[SUBSYSTEM_COUNT];
+
+/** Setup
+ * @brief Arduino setup function. Initializes all subsystems and freezes on error.
+ */
 void setup(){
-  setup_bica();
-  setup_display();
-  setup_pins();
-  setup_serial();
-  eflag_setup = have_errors();
-  update_error_display();
-  // Halt on setup error
-  while(eflag_setup) delay(1000);
+    Serial.println("Hello");
+  // Setup display. Non-Blocking on Failure.
+  Wire.begin();
+  Wire.beginTransmission(DISP_ADDRESS);
+  int error = Wire.endTransmission();
+  if(error == 0)
+    display_status = display.begin();
+  else  
+    display_status = false;
+  disp_write_func = nullptr;
+  prev_write_func = nullptr;
+
+  if(display_status){
+    display.clear();
+    display.setFont(FONT_BOLD);
+    display.drawString(0, 1, "   BOOTING   ");
+    display.display();
+  }
+
+  //Setup Serial (TO BE MOVED)
+  Serial.begin(BAUD_RATE);
+  
+  // Setup Display States
+  debug_led_a = LOW;
+  debug_led_b = LOW;
+  error_led = LOW;
+  current_screen = 0;
+
+  //Loop through setup functions
+  for (int i = 0; i<SUBSYSTEM_COUNT; i++){
+    int err = subsystem_registry[i].setup();
+    if(err != EOK){
+      disp_write_func = subsystem_registry[i].set_error_text;
+      write_display();
+      while(true) delay(1000);
+    }
+  }
+
+  //Setup loop functions
+  loops_to_alive_light = 0;
+  loops_to_swap = DISPLAY_SWAP_DELAY_MAIN/LOOP_DELAY;
+  loops_to_update = DISPLAY_UPDATE_DELAY/LOOP_DELAY;
 }
 
+
+/** Loop
+ * @brief Arduino loop function. Processes all subsystems, then chooses which to render via rotation and priority.
+ * Debug Screens -> Error Screens -> Status Screens
+ */
 void loop(){
-  loop_process_messages();
-  update_error_display();
-  loop_debug_button(); //After error_display
-  loop_display(); //must be last
-  delay(10);
+  // Process all subsystems, collect errors
+  int err[SUBSYSTEM_COUNT];
+  int err_count = 0;
+  for(int i = 0; i< SUBSYSTEM_COUNT; i++){
+    
+    err[i] = subsystem_registry[i].loop();
+    if(err[i] != EOK){ 
+      err_count++;
+      if(err[i] != prev_err[i])
+        log_error(i, err[i]);
+    }
+    prev_err[i] = err[i];
+  }
+  
+
+  // Update alive light (now, so that is can be overwritten by debug screens)
+  if(loops_to_alive_light <=0){
+    debug_led_a = (debug_led_a == HIGH)? LOW: HIGH;
+    loops_to_alive_light = ((debug_led_a == HIGH)? ALIVE_LIGHT_DELAY_ON: ALIVE_LIGHT_DELAY_OFF)/LOOP_DELAY;
+  }
+  
+  // Update Error LED based on err_count
+  if(err_count > 0){
+    error_led = HIGH;
+    err[DEBUG_SYS_NUM] = 1; //Hardcoded so that this displays, even with errors.
+  }else{
+    error_led = LOW;
+  }
+
+  // Get debug state
+  bool debug = (digitalRead(P_DEBUG_BUTTON) == HIGH)? true: false;
+
+  // Update screen buffers and LED states
+  // Prep logic variables
+  int next_screen = current_screen;
+  if(loops_to_swap <=0) loops_to_update = 0;
+
+  // DEBUG
+  if(debug){ 
+    
+    disp_write_func = subsystem_registry[current_screen].set_debug_text;
+  
+  // ERRORS
+  }else if(err_count > 0 && loops_to_update <= 0){ 
+    
+    int index;
+    for (int i = 0; i < SUBSYSTEM_COUNT+1; i++){
+      // Find starting (skip ahead one if time to swap)
+      index = (i + current_screen + ((loops_to_swap <= 0)?1:0))%SUBSYSTEM_COUNT;
+      if(err[index] != EOK){
+        next_screen = index;
+        disp_write_func = subsystem_registry[index].set_error_text;
+        break;
+      }
+    }
+
+  // REGULAR STATUS
+  }else if(loops_to_update <= 0){ 
+    int index = (current_screen + ((loops_to_swap <= 0)?1:0))%SUBSYSTEM_COUNT;
+    next_screen = index;
+    disp_write_func = subsystem_registry[index].set_status_text;
+  }
+
+  // Display Update Logic
+  if(loops_to_update <= 0)
+    write_display();
+  
+
+  // Clean up and decrement loop variables
+  if(!debug){
+    if(loops_to_swap <= 0)
+      loops_to_swap = ((next_screen == 0 || err_count > 0)? DISPLAY_SWAP_DELAY_MAIN :DISPLAY_SWAP_DELAY) / LOOP_DELAY;
+    loops_to_swap--;
+  }
+  
+  if(loops_to_update <= 0)
+    loops_to_update = DISPLAY_UPDATE_DELAY/LOOP_DELAY;
+  loops_to_update--;
+  loops_to_alive_light--;
+
+  // Track 
+  current_screen = next_screen;
+
+  // Wait for next loop
+  delay(LOOP_DELAY);
 }
